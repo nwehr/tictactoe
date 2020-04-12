@@ -42,8 +42,6 @@ func main() {
 	}
 
 	for {
-		log.Println("waiting for state")
-
 		s := state.GameState{}
 		if err := gob.NewDecoder(conn).Decode(&s); err != nil {
 			log.Fatal("could not read/decode game state: %v", err)

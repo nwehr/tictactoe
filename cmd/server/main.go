@@ -38,6 +38,7 @@ func handleRequest(conn net.Conn) {
 
 		if err := gob.NewDecoder(conn).Decode(&msg); err != nil {
 			log.Printf("could not decode message: %v\n", err)
+			break
 		}
 
 		switch msg.Action {
