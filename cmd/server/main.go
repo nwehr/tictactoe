@@ -54,7 +54,7 @@ func handleRequest(conn net.Conn) {
 			}
 			sessions = append(sessions, s)
 			if err := gob.NewEncoder(conn).Encode(s.State); err != nil {
-				log.Fatal("%v", err)
+				log.Printf("%v\n", err)
 			}
 		case session.Join:
 			log.Println("join session")
@@ -67,7 +67,7 @@ func handleRequest(conn net.Conn) {
 
 					for _, player := range []session.Player{sessions[i].PlayerO, sessions[i].PlayerX} {
 						if err := gob.NewEncoder(*player.Conn).Encode(s.State); err != nil {
-							log.Fatal("%v", err)
+							log.Printf("%v\n", err)
 						}
 					}
 
@@ -84,7 +84,7 @@ func handleRequest(conn net.Conn) {
 					for _, player := range []session.Player{s.PlayerO, s.PlayerX} {
 						log.Println("sending state to player %s", player.ID)
 						if err := gob.NewEncoder(*player.Conn).Encode(s.State); err != nil {
-							log.Fatal("%v", err)
+							log.Printf("%v\n", err)
 						}
 					}
 				}
