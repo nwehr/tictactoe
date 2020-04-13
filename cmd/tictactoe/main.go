@@ -14,10 +14,33 @@ import (
 )
 
 func main() {
-	host := prompt("Server host:port")
-	action := prompt("Session create|join")
-	sessionID := prompt("Session ID")
+	host := ""
+	action := ""
+	sessionID := ""
+
+	for i, arg := range os.Args {
+		switch arg {
+		case "--server":
+			host = os.Args[i+1]
+		case "--session":
+			sessionID = os.Args[i+1]
+		case "--join":
+			action = "join"
+		case "--create":
+			action = "create"
+		}
+
+	}
 	player := "o"
+	if host == "" {
+		host = prompt("server <host:port>")
+	}
+	if action == "" {
+		action = prompt("session join|[create]")
+	}
+	if sessionID == "" {
+		sessionID = prompt("session id")
+	}
 
 	conn, err := net.Dial("tcp", host)
 	if err != nil {
