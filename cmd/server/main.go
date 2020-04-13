@@ -8,9 +8,10 @@ import (
 	"github.com/nwehr/tictactoe/pkg/session"
 )
 
-var sessions []session.Session
+var sessions map[string]*session.Session
 
 func main() {
+	sessions = map[string]*session.Session{}
 
 	l, err := net.Listen("tcp", "0.0.0.0:3333")
 	if err != nil {
@@ -18,6 +19,7 @@ func main() {
 	}
 
 	defer l.Close()
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -25,13 +27,16 @@ func main() {
 		}
 
 		go handleRequest(conn)
-
 	}
 }
 
 func handleRequest(conn net.Conn) {
-	log.Println("accepted new connection")
-	defer conn.Close()
+	defer func() {
+		log.Println("closing connection")
+		if err := conn.Close(); err != nil {
+			log.Printf("error closing connection: %v", err)
+		}
+	}()
 
 	for {
 		msg := session.Message{}
@@ -43,53 +48,66 @@ func handleRequest(conn net.Conn) {
 
 		switch msg.Action {
 		case session.Create:
-			log.Println("new session")
-			s := session.Session{
-				ID:    msg.SessionID,
-				State: msg.State,
-				PlayerO: session.Player{
-					ID:   "o",
-					Conn: &conn,
-				},
-			}
-			sessions = append(sessions, s)
-			if err := gob.NewEncoder(conn).Encode(s.State); err != nil {
-				log.Printf("%v\n", err)
-			}
+			createSession(msg, &conn)
 		case session.Join:
-			log.Println("join session")
-			for i, s := range sessions {
-				if s.ID == msg.SessionID {
-					sessions[i].PlayerX = session.Player{
-						ID:   "x",
-						Conn: &conn,
-					}
-
-					for _, player := range []session.Player{sessions[i].PlayerO, sessions[i].PlayerX} {
-						if err := gob.NewEncoder(*player.Conn).Encode(s.State); err != nil {
-							log.Printf("%v\n", err)
-						}
-					}
-
-					break
-				}
-
-			}
-
+			joinSession(msg, &conn)
 		case session.Update:
-			log.Println("update session")
-			for _, s := range sessions {
-				if s.ID == msg.SessionID {
-					s.State = msg.State
-					for _, player := range []session.Player{s.PlayerO, s.PlayerX} {
-						log.Println("sending state to player %s", player.ID)
-						if err := gob.NewEncoder(*player.Conn).Encode(s.State); err != nil {
-							log.Printf("%v\n", err)
-						}
-					}
-				}
+			updateSession(msg)
+		}
+
+		sess, ok := sessions[msg.SessionID]
+
+		if !ok {
+			log.Printf("session %s does not exists\n", msg.SessionID)
+			continue
+		}
+
+		for _, player := range []session.Player{sess.PlayerO, sess.PlayerX} {
+			log.Printf("updating player %s with game state", player.ID)
+			if player.Conn == nil {
+				log.Printf("player %s has a nil connection\n", player.ID)
+				continue
 			}
+
+			if err := gob.NewEncoder(*player.Conn).Encode(sess.State); err != nil {
+				log.Printf("could not write/encode state to player: %v", err)
+			}
+		}
+
+		if _, won := sess.State.Winner(); won {
+			delete(sessions, msg.SessionID)
+			break
 		}
 	}
 
+}
+
+func createSession(msg session.Message, conn *net.Conn) {
+	log.Printf("new session %s", msg.SessionID)
+	s := &session.Session{
+		ID:    msg.SessionID,
+		State: msg.State,
+		PlayerO: session.Player{
+			ID:   "o",
+			Conn: conn,
+		},
+	}
+	sessions[s.ID] = s
+}
+
+func joinSession(msg session.Message, conn *net.Conn) {
+	log.Printf("join session %s", msg.SessionID)
+	if sess, ok := sessions[msg.SessionID]; ok {
+		sess.PlayerX = session.Player{
+			ID:   "x",
+			Conn: conn,
+		}
+	}
+}
+
+func updateSession(msg session.Message) {
+	log.Printf("update session %s", msg.SessionID)
+	if sess, ok := sessions[msg.SessionID]; ok {
+		sess.State = msg.State
+	}
 }

@@ -54,9 +54,14 @@ func main() {
 			break
 		}
 
+		if s.AvailableMoves() == 0 {
+			fmt.Printf("tie!")
+			break
+		}
+
 		if s.NextTurn() == player {
 			update := session.Message{
-				SessionID: "test",
+				SessionID: sessionID,
 				Action:    session.Update,
 				State:     s.Move(getMove(s)),
 			}

@@ -65,6 +65,18 @@ func (s GameState) NextTurn() string {
 	return "x"
 }
 
+func (s GameState) AvailableMoves() int {
+	moves := 0
+	for _, row := range s.Rows() {
+		for _, cell := range row {
+			if cell == " " {
+				moves++
+			}
+		}
+	}
+
+	return moves
+}
 func (s GameState) Winner() (string, bool) {
 	for _, row := range s.Rows() {
 		first := row[0]
