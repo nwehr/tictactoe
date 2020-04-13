@@ -3,3 +3,6 @@ run:
 
 run-server:
 	go run cmd/server/**.go
+
+tictactoe:
+	go build -o tictactoe cmd/tictactoe/**.go

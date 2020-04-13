@@ -46,6 +46,15 @@ func handleRequest(conn net.Conn) {
 			break
 		}
 
+		sess, ok := sessions[msg.SessionID]
+		if !ok {
+			sess = &session.Session{
+				ID:    msg.SessionID,
+				State: msg.State,
+			}
+			sessions[msg.SessionID] = sess
+		}
+
 		switch msg.Action {
 		case session.Create:
 			createSession(msg, &conn)
@@ -55,15 +64,7 @@ func handleRequest(conn net.Conn) {
 			updateSession(msg)
 		}
 
-		sess, ok := sessions[msg.SessionID]
-
-		if !ok {
-			log.Printf("session %s does not exists\n", msg.SessionID)
-			continue
-		}
-
 		for _, player := range []session.Player{sess.PlayerO, sess.PlayerX} {
-			log.Printf("updating player %s with game state", player.ID)
 			if player.Conn == nil {
 				log.Printf("player %s has a nil connection\n", player.ID)
 				continue
@@ -74,29 +75,20 @@ func handleRequest(conn net.Conn) {
 			}
 		}
 
-		if _, won := sess.State.Winner(); won {
-			delete(sessions, msg.SessionID)
-			break
-		}
 	}
 
 }
 
 func createSession(msg session.Message, conn *net.Conn) {
-	log.Printf("new session %s", msg.SessionID)
-	s := &session.Session{
-		ID:    msg.SessionID,
-		State: msg.State,
-		PlayerO: session.Player{
+	if sess, ok := sessions[msg.SessionID]; ok {
+		sess.PlayerO = session.Player{
 			ID:   "o",
 			Conn: conn,
-		},
+		}
 	}
-	sessions[s.ID] = s
 }
 
 func joinSession(msg session.Message, conn *net.Conn) {
-	log.Printf("join session %s", msg.SessionID)
 	if sess, ok := sessions[msg.SessionID]; ok {
 		sess.PlayerX = session.Player{
 			ID:   "x",
@@ -106,7 +98,6 @@ func joinSession(msg session.Message, conn *net.Conn) {
 }
 
 func updateSession(msg session.Message) {
-	log.Printf("update session %s", msg.SessionID)
 	if sess, ok := sessions[msg.SessionID]; ok {
 		sess.State = msg.State
 	}

@@ -14,9 +14,9 @@ import (
 )
 
 func main() {
-	host := query("Server host:port")
-	action := query("Session create|join")
-	sessionID := query("Session ID")
+	host := prompt("Server host:port")
+	action := prompt("Session create|join")
+	sessionID := prompt("Session ID")
 	player := "o"
 
 	conn, err := net.Dial("tcp", host)
@@ -54,16 +54,16 @@ func main() {
 			break
 		}
 
-		if s.AvailableMoves() == 0 {
+		if len(s.AvailableCaptures()) == 0 {
 			fmt.Printf("tie!")
 			break
 		}
 
-		if s.NextTurn() == player {
+		if s.CurrentPlayer() == player {
 			update := session.Message{
 				SessionID: sessionID,
 				Action:    session.Update,
-				State:     s.Move(getMove(s)),
+				State:     s.Capture(prompt(fmt.Sprintf("%s capture", player))),
 			}
 
 			if err := gob.NewEncoder(conn).Encode(update); err != nil {
@@ -74,24 +74,7 @@ func main() {
 
 }
 
-func play(s state.GameState) {
-	s.Print()
-
-	if player, won := s.Winner(); won == true {
-		fmt.Printf("player %s wins!", player)
-		os.Exit(0)
-	}
-
-	play(s.Move(getMove(s)))
-}
-
-func getMove(s state.GameState) string {
-	fmt.Printf("%s move: ", s.NextTurn())
-	move, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-	return strings.ToUpper(strings.TrimSpace(move))
-}
-
-func query(question string) string {
+func prompt(question string) string {
 	fmt.Printf("%s: ", question)
 
 	response, _ := bufio.NewReader(os.Stdin).ReadString('\n')

@@ -31,7 +31,7 @@ func (s GameState) Print() {
 	fmt.Println(state)
 }
 
-func (s GameState) Move(position string) GameState {
+func (s GameState) Capture(position string) GameState {
 	next := GameState{}
 
 	for key, value := range s {
@@ -39,43 +39,40 @@ func (s GameState) Move(position string) GameState {
 	}
 
 	if next[position] == " " {
-		next[position] = s.NextTurn()
+		next[position] = s.CurrentPlayer()
 	}
 
 	return next
 }
 
-func (s GameState) NextTurn() string {
-	xTurns := 0
-	oTurns := 0
+func (s GameState) CurrentPlayer() string {
+	xNumCaptures := 0
+	oNumCaptures := 0
 
-	for _, cell := range s {
-		switch cell {
+	for _, square := range s {
+		switch square {
 		case "x":
-			xTurns++
+			xNumCaptures++
 		case "o":
-			oTurns++
+			oNumCaptures++
 		}
 	}
 
-	if xTurns > oTurns {
+	if xNumCaptures > oNumCaptures {
 		return "o"
 	}
 
 	return "x"
 }
 
-func (s GameState) AvailableMoves() int {
-	moves := 0
-	for _, row := range s.Rows() {
-		for _, cell := range row {
-			if cell == " " {
-				moves++
-			}
+func (s GameState) AvailableCaptures() []string {
+	availableCaptures := []string{}
+	for position, square := range s {
+		if square == " " {
+			availableCaptures = append(availableCaptures, position)
 		}
 	}
-
-	return moves
+	return availableCaptures
 }
 func (s GameState) Winner() (string, bool) {
 	for _, row := range s.Rows() {
